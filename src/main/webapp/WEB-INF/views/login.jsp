@@ -1,16 +1,55 @@
-<%--
-  Created by IntelliJ IDEA.
-  User: ASUS
-  Date: 14-Dec-25
-  Time: 7:44 PM
-  To change this template use File | Settings | File Templates.
---%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<!DOCTYPE html>
 <html>
 <head>
-    <title>Title</title>
+    <title>Login - Bug Bounty Lite</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
+<h1>Bug Bounty Lite</h1>
+<h2>Login</h2>
 
+<c:if test="${not empty error}">
+    <div style="color: red; border: 1px solid red; padding: 10px; margin: 10px 0;">
+            ${error}
+    </div>
+</c:if>
+
+<c:if test="${not empty success}">
+    <div style="color: green; border: 1px solid green; padding: 10px; margin: 10px 0;">
+            ${success}
+    </div>
+</c:if>
+
+<form action="/login" method="post">
+    <div>
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username" required>
+    </div>
+
+    <div>
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password" required>
+    </div>
+
+    <div>
+        <button type="submit">Login</button>
+    </div>
+</form>
+
+<p>Don't have an account? <a href="/register">Register here</a></p>
+
+<hr>
+<h3>Test Accounts</h3>
+<p>All passwords: <strong>password123</strong></p>
+<ul>
+    <li><strong>admin</strong> - Admin user</li>
+    <li><strong>john_hunter</strong> - Hunter (Developer)</li>
+    <li><strong>jane_hunter</strong> - Hunter (Developer)</li>
+    <li><strong>reporter1</strong> - Reporter</li>
+    <li><strong>reporter2</strong> - Reporter</li>
+</ul>
 </body>
 </html>
