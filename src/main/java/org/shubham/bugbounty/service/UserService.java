@@ -21,15 +21,12 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
-    /**
-     * Authenticate user with username and password
-     */
+
     public Optional<User> authenticate(String username, String password) {
         Optional<User> userOpt = userRepository.findByUsername(username);
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            // Simple password check - will implement proper hashing later
             if (user.getPassword().equals(password)) {
                 return Optional.of(user);
             }
@@ -38,16 +35,12 @@ public class UserService {
         return Optional.empty();
     }
 
-    /**
-     * Register a new user
-     */
+
     public User registerUser(String username, String password, String email, String fullName, Role role) {
-        // Check if username already exists
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already exists");
         }
 
-        // Check if email already exists
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already exists");
         }
@@ -56,65 +49,39 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    /**
-     * Find user by ID
-     */
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
 
-    /**
-     * Find user by username
-     */
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
-    /**
-     * Find user by email
-     */
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
-    /**
-     * Get all users
-     */
     public List<User> findAllUsers() {
         return userRepository.findAll();
     }
 
-    /**
-     * Get users by role
-     */
     public List<User> findUsersByRole(Role role) {
         return userRepository.findByRole(role);
     }
 
-    /**
-     * Check if username exists
-     */
+
     public boolean usernameExists(String username) {
         return userRepository.existsByUsername(username);
     }
 
-    /**
-     * Check if email exists
-     */
     public boolean emailExists(String email) {
         return userRepository.existsByEmail(email);
     }
 
-    /**
-     * Update user
-     */
     public User updateUser(User user) {
         return userRepository.save(user);
     }
 
-    /**
-     * Delete user
-     */
     public void deleteUser(Long id) {
         userRepository.deleteById(id);
     }

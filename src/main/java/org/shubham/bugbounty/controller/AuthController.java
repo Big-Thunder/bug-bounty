@@ -23,9 +23,6 @@ public class AuthController {
         this.userService = userService;
     }
 
-    /**
-     * Show login page
-     */
     @GetMapping("/login")
     public String showLoginPage(HttpSession session) {
         // If already logged in, redirect to home
@@ -35,9 +32,6 @@ public class AuthController {
         return "login";
     }
 
-    /**
-     * Process login
-     */
     @PostMapping("/login")
     public String processLogin(
             @RequestParam String username,
@@ -62,9 +56,7 @@ public class AuthController {
         }
     }
 
-    /**
-     * Show registration page
-     */
+
     @GetMapping("/register")
     public String showRegisterPage(HttpSession session) {
         // If already logged in, redirect to home
@@ -74,9 +66,7 @@ public class AuthController {
         return "register";
     }
 
-    /**
-     * Process registration
-     */
+
     @PostMapping("/register")
     public String processRegistration(
             @RequestParam String username,
@@ -87,13 +77,11 @@ public class AuthController {
             @RequestParam String role,
             Model model) {
 
-        // Validate passwords match
         if (!password.equals(confirmPassword)) {
             model.addAttribute("error", "Passwords do not match");
             return "register";
         }
 
-        // Validate password length
         if (password.length() < 6) {
             model.addAttribute("error", "Password must be at least 6 characters");
             return "register";
@@ -112,9 +100,6 @@ public class AuthController {
         }
     }
 
-    /**
-     * Logout
-     */
     @GetMapping("/logout")
     public String logout(HttpSession session) {
         session.invalidate();

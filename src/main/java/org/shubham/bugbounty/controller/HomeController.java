@@ -9,9 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class HomeController {
 
-    /**
-     * Root endpoint - redirect to login or home
-     */
     @GetMapping("/")
     public String index(HttpSession session) {
         if (session.getAttribute("user") != null) {
@@ -20,9 +17,6 @@ public class HomeController {
         return "redirect:/login";
     }
 
-    /**
-     * Home page - requires authentication
-     */
     @GetMapping("/home")
     public String home(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
