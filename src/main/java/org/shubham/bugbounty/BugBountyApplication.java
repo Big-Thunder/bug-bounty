@@ -9,5 +9,4 @@ public class BugBountyApplication {
     public static void main(String[] args) {
         SpringApplication.run(BugBountyApplication.class, args);
     }
-
 }
