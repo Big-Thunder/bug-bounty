@@ -3,6 +3,7 @@ package org.shubham.bugbounty.service;
 import org.shubham.bugbounty.model.Bug;
 import org.shubham.bugbounty.model.User;
 import org.shubham.bugbounty.model.enums.BugStatus;
+import org.shubham.bugbounty.model.enums.Role;
 import org.shubham.bugbounty.model.enums.Severity;
 import org.shubham.bugbounty.repositories.BugRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,71 +18,237 @@ import java.util.Optional;
 public class BugService {
 
     private final BugRepository bugRepository;
+    private final BugHistoryService bugHistoryService;
 
     @Autowired
-    public BugService(BugRepository bugRepository) {
+    public BugService(BugRepository bugRepository, BugHistoryService bugHistoryService) {
         this.bugRepository = bugRepository;
+        this.bugHistoryService = bugHistoryService;
     }
 
+    /**
+     * Create a new bug
+     */
     public Bug createBug(String title, String description, Severity severity,
                          String affectedModule, User reporter) {
         Bug bug = new Bug(title, description, severity, affectedModule, reporter);
-        return bugRepository.save(bug);
+        Bug savedBug = bugRepository.save(bug);
+
+        // Record initial status in history
+        bugHistoryService.recordStatusChange(savedBug, null, BugStatus.OPEN, reporter, "Bug reported");
+
+        return savedBug;
     }
 
+    /**
+     * Claim a bug (Hunter only)
+     */
+    public Bug claimBug(Long bugId, User hunter) {
+        if (hunter.getRole() != Role.HUNTER) {
+            throw new IllegalStateException("Only hunters can claim bugs");
+        }
+
+        Optional<Bug> bugOpt = bugRepository.findById(bugId);
+        if (bugOpt.isEmpty()) {
+            throw new IllegalArgumentException("Bug not found");
+        }
+
+        Bug bug = bugOpt.get();
+
+        // Check if bug is in OPEN status
+        if (bug.getStatus() != BugStatus.OPEN) {
+            throw new IllegalStateException("Bug must be in OPEN status to be claimed");
+        }
+
+        // Check if already assigned
+        if (bug.getAssignedHunter() != null) {
+            throw new IllegalStateException("Bug is already claimed by another hunter");
+        }
+
+        // Claim the bug
+        BugStatus oldStatus = bug.getStatus();
+        bug.setStatus(BugStatus.CLAIMED);
+        bug.setAssignedHunter(hunter);
+        Bug updatedBug = bugRepository.save(bug);
+
+        // Record in history
+        bugHistoryService.recordStatusChange(updatedBug, oldStatus, BugStatus.CLAIMED,
+                hunter, "Bug claimed for resolution");
+
+        return updatedBug;
+    }
+
+    /**
+     * Mark bug as fixed (Hunter only, must be assigned to them)
+     */
+    public Bug markAsFixed(Long bugId, User hunter, String resolutionNotes) {
+        if (hunter.getRole() != Role.HUNTER) {
+            throw new IllegalStateException("Only hunters can mark bugs as fixed");
+        }
+
+        Optional<Bug> bugOpt = bugRepository.findById(bugId);
+        if (bugOpt.isEmpty()) {
+            throw new IllegalArgumentException("Bug not found");
+        }
+
+        Bug bug = bugOpt.get();
+
+        // Check if bug is in CLAIMED status
+        if (bug.getStatus() != BugStatus.CLAIMED) {
+            throw new IllegalStateException("Bug must be in CLAIMED status to be marked as fixed");
+        }
+
+        // Check if assigned to this hunter
+        if (bug.getAssignedHunter() == null || !bug.getAssignedHunter().getId().equals(hunter.getId())) {
+            throw new IllegalStateException("Bug can only be marked as fixed by the assigned hunter");
+        }
+
+        // Mark as fixed
+        BugStatus oldStatus = bug.getStatus();
+        bug.setStatus(BugStatus.FIXED);
+        bug.setResolutionNotes(resolutionNotes);
+        Bug updatedBug = bugRepository.save(bug);
+
+        // Record in history
+        bugHistoryService.recordStatusChange(updatedBug, oldStatus, BugStatus.FIXED,
+                hunter, resolutionNotes);
+
+        return updatedBug;
+    }
+
+    /**
+     * Close a bug (Admin only)
+     */
+    public Bug closeBug(Long bugId, User admin, String verificationNotes) {
+        if (admin.getRole() != Role.ADMIN) {
+            throw new IllegalStateException("Only admins can close bugs");
+        }
+
+        Optional<Bug> bugOpt = bugRepository.findById(bugId);
+        if (bugOpt.isEmpty()) {
+            throw new IllegalArgumentException("Bug not found");
+        }
+
+        Bug bug = bugOpt.get();
+
+        // Check if bug is in FIXED status
+        if (bug.getStatus() != BugStatus.FIXED) {
+            throw new IllegalStateException("Bug must be in FIXED status to be closed");
+        }
+
+        // Close the bug
+        BugStatus oldStatus = bug.getStatus();
+        bug.setStatus(BugStatus.CLOSED);
+
+        // Append verification notes to resolution notes
+        if (verificationNotes != null && !verificationNotes.trim().isEmpty()) {
+            String currentNotes = bug.getResolutionNotes() != null ? bug.getResolutionNotes() : "";
+            bug.setResolutionNotes(currentNotes + "\n\n--- Admin Verification ---\n" + verificationNotes);
+        }
+
+        Bug updatedBug = bugRepository.save(bug);
+
+        // Record in history
+        bugHistoryService.recordStatusChange(updatedBug, oldStatus, BugStatus.CLOSED,
+                admin, verificationNotes != null ? verificationNotes : "Bug verified and closed");
+
+        return updatedBug;
+    }
+
+    /**
+     * Find bug by ID
+     */
     public Optional<Bug> findById(Long id) {
         return bugRepository.findById(id);
     }
 
+    /**
+     * Get all bugs
+     */
     public List<Bug> findAllBugs() {
         return bugRepository.findAllByOrderByCreatedAtDesc();
     }
 
+    /**
+     * Find bugs by status
+     */
     public List<Bug> findBugsByStatus(BugStatus status) {
         return bugRepository.findByStatusOrderByCreatedAtDesc(status);
     }
 
+    /**
+     * Find bugs by severity
+     */
     public List<Bug> findBugsBySeverity(Severity severity) {
         return bugRepository.findBySeverity(severity);
     }
 
+    /**
+     * Find bugs by reporter
+     */
     public List<Bug> findBugsByReporter(User reporter) {
         return bugRepository.findByReporter(reporter);
     }
 
+    /**
+     * Find bugs by reporter ID
+     */
     public List<Bug> findBugsByReporterId(Long reporterId) {
         return bugRepository.findByReporterId(reporterId);
     }
 
+    /**
+     * Find bugs assigned to hunter
+     */
     public List<Bug> findBugsByAssignedHunter(User hunter) {
         return bugRepository.findByAssignedHunter(hunter);
     }
 
+    /**
+     * Find bugs assigned to hunter by ID
+     */
     public List<Bug> findBugsByAssignedHunterId(Long hunterId) {
         return bugRepository.findByAssignedHunterId(hunterId);
     }
 
-
+    /**
+     * Find unassigned bugs (status OPEN with no hunter)
+     */
     public List<Bug> findUnassignedBugs() {
         return bugRepository.findUnassignedBugs();
     }
 
+    /**
+     * Search bugs by title
+     */
     public List<Bug> searchBugsByTitle(String keyword) {
         return bugRepository.findByTitleContainingIgnoreCase(keyword);
     }
 
+    /**
+     * Update bug
+     */
     public Bug updateBug(Bug bug) {
         return bugRepository.save(bug);
     }
 
+    /**
+     * Delete bug
+     */
     public void deleteBug(Long id) {
         bugRepository.deleteById(id);
     }
 
+    /**
+     * Validate status transition
+     */
     public boolean canTransitionStatus(Bug bug, BugStatus newStatus) {
         return bug.getStatus().canTransitionTo(newStatus);
     }
 
+    /**
+     * Get bug statistics
+     */
     public long countBugsByStatus(BugStatus status) {
         return bugRepository.countByStatus(status);
     }

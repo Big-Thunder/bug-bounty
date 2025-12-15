@@ -132,44 +132,116 @@
         </c:if>
     </div>
 
-    <!-- Action Buttons (will be implemented in Phase 4) -->
+    <!-- Action Buttons -->
     <div style="margin: 20px 0;">
         <h3>Actions:</h3>
 
+        <c:if test="${not empty error}">
+            <div style="color: red; border: 1px solid red; padding: 10px; margin: 10px 0; background-color: #ffe6e6;">
+                <strong>Error:</strong> ${error}
+            </div>
+        </c:if>
+
         <c:choose>
+            <%-- HUNTER can claim OPEN bugs --%>
             <c:when test="${bug.status == 'OPEN' && sessionScope.role == 'HUNTER'}">
-                <p><em>Claim functionality will be available in Phase 4</em></p>
-                <!-- <form action="/bugs/${bug.id}/claim" method="post" style="display: inline;">
-                <button type="submit">Claim This Bug</button>
-                </form> -->
+                <form action="/bugs/${bug.id}/claim" method="post" style="display: inline;">
+                    <button type="submit" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; font-size: 16px;">
+                        🎯 Claim This Bug
+                    </button>
+                </form>
+                <p><em>Click to claim this bug and start working on it</em></p>
             </c:when>
 
+            <%-- HUNTER can mark CLAIMED bugs as FIXED (if assigned to them) --%>
             <c:when test="${bug.status == 'CLAIMED' && sessionScope.role == 'HUNTER' && bug.assignedHunter.id == sessionScope.userId}">
-                <p><em>Mark as Fixed functionality will be available in Phase 4</em></p>
-                <!-- <form action="/bugs/${bug.id}/fix" method="post" style="display: inline;">
-                <button type="submit">Mark as Fixed</button>
-                </form> -->
+                <form action="/bugs/${bug.id}/fix" method="post" style="margin-top: 10px;">
+                    <label for="resolutionNotes"><strong>Resolution Notes:</strong> <span style="color: red;">*</span></label><br>
+                    <textarea id="resolutionNotes" name="resolutionNotes" required
+                              style="width: 100%; max-width: 600px; padding: 8px; font-size: 14px; min-height: 100px; margin-top: 5px;"
+                              placeholder="Describe the fix you implemented..."></textarea>
+                    <br>
+                    <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; cursor: pointer; font-size: 16px; margin-top: 10px;">
+                        ✅ Mark as Fixed
+                    </button>
+                </form>
+                <p><em>Provide details about the fix before marking as fixed</em></p>
             </c:when>
 
+            <%-- ADMIN can close FIXED bugs --%>
             <c:when test="${bug.status == 'FIXED' && sessionScope.role == 'ADMIN'}">
-                <p><em>Close Bug functionality will be available in Phase 4</em></p>
-                <!-- <form action="/bugs/${bug.id}/close" method="post" style="display: inline;">
-                <button type="submit">Close Bug</button>
-                </form> -->
+                <form action="/bugs/${bug.id}/close" method="post" style="margin-top: 10px;">
+                    <label for="verificationNotes"><strong>Verification Notes:</strong> (Optional)</label><br>
+                    <textarea id="verificationNotes" name="verificationNotes"
+                              style="width: 100%; max-width: 600px; padding: 8px; font-size: 14px; min-height: 80px; margin-top: 5px;"
+                              placeholder="Add verification notes (optional)..."></textarea>
+                    <br>
+                    <button type="submit" style="padding: 10px 20px; background-color: #6f42c1; color: white; border: none; cursor: pointer; font-size: 16px; margin-top: 10px;">
+                        🔒 Close Bug
+                    </button>
+                </form>
+                <p><em>Verify the fix and close the bug</em></p>
             </c:when>
 
+            <%-- Bug is CLOSED --%>
+            <c:when test="${bug.status == 'CLOSED'}">
+                <div style="border: 1px solid #28a745; padding: 15px; background-color: #d4edda; color: #155724;">
+                    <strong>✓ This bug has been resolved and closed.</strong>
+                </div>
+            </c:when>
+
+            <%-- No actions available --%>
             <c:otherwise>
-                <p><em>No actions available for current status and role</em></p>
+                <div style="border: 1px solid #ccc; padding: 15px; background-color: #f8f9fa;">
+                    <em>No actions available for current status and role.</em>
+                </div>
             </c:otherwise>
         </c:choose>
 
         <c:if test="${sessionScope.role == 'ADMIN'}">
-            <form action="/bugs/${bug.id}/delete" method="post" style="display: inline;"
-                  onsubmit="return confirm('Are you sure you want to delete this bug?');">
-                <button type="submit" style="background-color: red; color: white;">Delete Bug (Admin)</button>
+            <form action="/bugs/${bug.id}/delete" method="post" style="display: inline; margin-left: 20px;"
+                  onsubmit="return confirm('Are you sure you want to delete this bug? This action cannot be undone.');">
+                <button type="submit" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; cursor: pointer; font-size: 14px;">
+                    🗑️ Delete Bug (Admin)
+                </button>
             </form>
         </c:if>
     </div>
+
+    <!-- Bug History -->
+    <c:if test="${not empty history}">
+        <hr style="margin: 30px 0;">
+        <h3>Bug History</h3>
+        <div style="border: 1px solid #007bff; padding: 20px; background-color: #f8f9fa;">
+            <table border="0" cellpadding="10" style="width: 100%;">
+                <c:forEach var="entry" items="${history}">
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="width: 180px; vertical-align: top;">
+                            <strong>${entry.createdAt.toString().replace('T', ' ')}</strong>
+                        </td>
+                        <td style="vertical-align: top;">
+                            <c:choose>
+                                <c:when test="${entry.oldStatus == null}">
+                                    <span style="color: blue;">● ${entry.newStatus}</span>
+                                </c:when>
+                                <c:otherwise>
+                                    <span style="color: #999;">${entry.oldStatus}</span>
+                                    →
+                                    <span style="color: blue; font-weight: bold;">${entry.newStatus}</span>
+                                </c:otherwise>
+                            </c:choose>
+                            <br>
+                            <small style="color: #666;">by ${entry.changedBy.fullName}</small>
+                            <c:if test="${not empty entry.changeNotes}">
+                                <br>
+                                <em style="color: #555;">${entry.changeNotes}</em>
+                            </c:if>
+                        </td>
+                    </tr>
+                </c:forEach>
+            </table>
+        </div>
+    </c:if>
 
     <div style="margin-top: 30px;">
         <a href="/bugs">← Back to Bug List</a>

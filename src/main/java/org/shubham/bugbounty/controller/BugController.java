@@ -2,10 +2,12 @@ package org.shubham.bugbounty.controller;
 
 import jakarta.servlet.http.HttpSession;
 import org.shubham.bugbounty.model.Bug;
+import org.shubham.bugbounty.model.BugHistory;
 import org.shubham.bugbounty.model.User;
 import org.shubham.bugbounty.model.enums.BugStatus;
 import org.shubham.bugbounty.model.enums.Role;
 import org.shubham.bugbounty.model.enums.Severity;
+import org.shubham.bugbounty.service.BugHistoryService;
 import org.shubham.bugbounty.service.BugService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -20,12 +22,17 @@ import java.util.Optional;
 public class BugController {
 
     private final BugService bugService;
+    private final BugHistoryService bugHistoryService;
 
     @Autowired
-    public BugController(BugService bugService) {
+    public BugController(BugService bugService, BugHistoryService bugHistoryService) {
         this.bugService = bugService;
+        this.bugHistoryService = bugHistoryService;
     }
 
+    /**
+     * List all bugs with optional filtering
+     */
     @GetMapping
     public String listBugs(
             @RequestParam(required = false) String status,
@@ -60,6 +67,9 @@ public class BugController {
         return "bug-list";
     }
 
+    /**
+     * Show bug details
+     */
     @GetMapping("/{id}")
     public String viewBug(@PathVariable Long id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
@@ -74,12 +84,18 @@ public class BugController {
         }
 
         Bug bug = bugOpt.get();
+        List<BugHistory> history = bugHistoryService.getBugHistoryById(id);
+
         model.addAttribute("bug", bug);
+        model.addAttribute("history", history);
         model.addAttribute("user", user);
 
         return "bug-detail";
     }
 
+    /**
+     * Show create bug form (Reporter only)
+     */
     @GetMapping("/create")
     public String showCreateBugForm(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
@@ -97,6 +113,9 @@ public class BugController {
         return "create-bug";
     }
 
+    /**
+     * Process bug creation
+     */
     @PostMapping("/create")
     public String createBug(
             @RequestParam String title,
@@ -143,7 +162,81 @@ public class BugController {
         }
     }
 
-    // Delete bug (Admin only, we'll implement authorization later)
+    /**
+     * Claim a bug (Hunter only)
+     */
+    @PostMapping("/{id}/claim")
+    public String claimBug(@PathVariable Long id, HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            bugService.claimBug(id, user);
+            return "redirect:/bugs/" + id;
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            model.addAttribute("error", e.getMessage());
+            return "redirect:/bugs/" + id;
+        }
+    }
+
+    /**
+     * Mark bug as fixed (Hunter only)
+     */
+    @PostMapping("/{id}/fix")
+    public String markAsFixed(
+            @PathVariable Long id,
+            @RequestParam String resolutionNotes,
+            HttpSession session,
+            Model model) {
+
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        if (resolutionNotes == null || resolutionNotes.trim().isEmpty()) {
+            model.addAttribute("error", "Resolution notes are required");
+            return "redirect:/bugs/" + id;
+        }
+
+        try {
+            bugService.markAsFixed(id, user, resolutionNotes);
+            return "redirect:/bugs/" + id;
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            model.addAttribute("error", e.getMessage());
+            return "redirect:/bugs/" + id;
+        }
+    }
+
+    /**
+     * Close a bug (Admin only)
+     */
+    @PostMapping("/{id}/close")
+    public String closeBug(
+            @PathVariable Long id,
+            @RequestParam(required = false) String verificationNotes,
+            HttpSession session,
+            Model model) {
+
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        try {
+            bugService.closeBug(id, user, verificationNotes);
+            return "redirect:/bugs/" + id;
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            model.addAttribute("error", e.getMessage());
+            return "redirect:/bugs/" + id;
+        }
+    }
+
+    /**
+     * Delete bug (Admin only)
+     */
     @PostMapping("/{id}/delete")
     public String deleteBug(@PathVariable Long id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
