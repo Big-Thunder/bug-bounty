@@ -6,6 +6,7 @@ import org.shubham.bugbounty.model.enums.BugStatus;
 import org.shubham.bugbounty.model.enums.Role;
 import org.shubham.bugbounty.model.enums.Severity;
 import org.shubham.bugbounty.repositories.BugRepository;
+import org.shubham.bugbounty.util.ValidationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,15 +27,31 @@ public class BugService {
         this.bugHistoryService = bugHistoryService;
     }
 
-    /**
-     * Create a new bug
-     */
     public Bug createBug(String title, String description, Severity severity,
                          String affectedModule, User reporter) {
+        title = ValidationUtil.sanitizeInput(title);
+        description = ValidationUtil.sanitizeInput(description);
+        affectedModule = ValidationUtil.sanitizeInput(affectedModule);
+
+        if (!ValidationUtil.isValidTitle(title)) {
+            throw new IllegalArgumentException("Title must be between 5 and 200 characters");
+        }
+
+        if (!ValidationUtil.isValidDescription(description)) {
+            throw new IllegalArgumentException("Description must be between 10 and 5000 characters");
+        }
+
+        if (severity == null) {
+            throw new IllegalArgumentException("Severity is required");
+        }
+
+        if (reporter == null) {
+            throw new IllegalArgumentException("Reporter is required");
+        }
+
         Bug bug = new Bug(title, description, severity, affectedModule, reporter);
         Bug savedBug = bugRepository.save(bug);
 
-        // Record initial status in history
         bugHistoryService.recordStatusChange(savedBug, null, BugStatus.OPEN, reporter, "Bug reported");
 
         return savedBug;
@@ -78,12 +95,19 @@ public class BugService {
         return updatedBug;
     }
 
-    /**
-     * Mark bug as fixed (Hunter only, must be assigned to them)
-     */
     public Bug markAsFixed(Long bugId, User hunter, String resolutionNotes) {
         if (hunter.getRole() != Role.HUNTER) {
             throw new IllegalStateException("Only hunters can mark bugs as fixed");
+        }
+
+        resolutionNotes = ValidationUtil.sanitizeInput(resolutionNotes);
+
+        if (resolutionNotes == null || resolutionNotes.length() < 10) {
+            throw new IllegalArgumentException("Resolution notes must be at least 10 characters");
+        }
+
+        if (resolutionNotes.length() > 2000) {
+            throw new IllegalArgumentException("Resolution notes cannot exceed 2000 characters");
         }
 
         Optional<Bug> bugOpt = bugRepository.findById(bugId);
@@ -93,35 +117,34 @@ public class BugService {
 
         Bug bug = bugOpt.get();
 
-        // Check if bug is in CLAIMED status
         if (bug.getStatus() != BugStatus.CLAIMED) {
             throw new IllegalStateException("Bug must be in CLAIMED status to be marked as fixed");
         }
 
-        // Check if assigned to this hunter
         if (bug.getAssignedHunter() == null || !bug.getAssignedHunter().getId().equals(hunter.getId())) {
             throw new IllegalStateException("Bug can only be marked as fixed by the assigned hunter");
         }
 
-        // Mark as fixed
         BugStatus oldStatus = bug.getStatus();
         bug.setStatus(BugStatus.FIXED);
         bug.setResolutionNotes(resolutionNotes);
         Bug updatedBug = bugRepository.save(bug);
 
-        // Record in history
         bugHistoryService.recordStatusChange(updatedBug, oldStatus, BugStatus.FIXED,
                 hunter, resolutionNotes);
 
         return updatedBug;
     }
 
-    /**
-     * Close a bug (Admin only)
-     */
     public Bug closeBug(Long bugId, User admin, String verificationNotes) {
         if (admin.getRole() != Role.ADMIN) {
             throw new IllegalStateException("Only admins can close bugs");
+        }
+
+        verificationNotes = ValidationUtil.sanitizeInput(verificationNotes);
+
+        if (verificationNotes != null && verificationNotes.length() > 2000) {
+            throw new IllegalArgumentException("Verification notes cannot exceed 2000 characters");
         }
 
         Optional<Bug> bugOpt = bugRepository.findById(bugId);
@@ -131,16 +154,13 @@ public class BugService {
 
         Bug bug = bugOpt.get();
 
-        // Check if bug is in FIXED status
         if (bug.getStatus() != BugStatus.FIXED) {
             throw new IllegalStateException("Bug must be in FIXED status to be closed");
         }
 
-        // Close the bug
         BugStatus oldStatus = bug.getStatus();
         bug.setStatus(BugStatus.CLOSED);
 
-        // Append verification notes to resolution notes
         if (verificationNotes != null && !verificationNotes.trim().isEmpty()) {
             String currentNotes = bug.getResolutionNotes() != null ? bug.getResolutionNotes() : "";
             bug.setResolutionNotes(currentNotes + "\n\n--- Admin Verification ---\n" + verificationNotes);
@@ -148,7 +168,6 @@ public class BugService {
 
         Bug updatedBug = bugRepository.save(bug);
 
-        // Record in history
         bugHistoryService.recordStatusChange(updatedBug, oldStatus, BugStatus.CLOSED,
                 admin, verificationNotes != null ? verificationNotes : "Bug verified and closed");
 

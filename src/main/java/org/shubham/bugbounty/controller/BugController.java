@@ -113,9 +113,6 @@ public class BugController {
         return "create-bug";
     }
 
-    /**
-     * Process bug creation
-     */
     @PostMapping("/create")
     public String createBug(
             @RequestParam String title,
@@ -130,23 +127,9 @@ public class BugController {
             return "redirect:/login";
         }
 
-        // Only reporters can create bugs
         if (user.getRole() != Role.REPORTER) {
             model.addAttribute("error", "Only reporters can create bugs");
             return "redirect:/bugs";
-        }
-
-        // Validate inputs
-        if (title == null || title.trim().isEmpty()) {
-            model.addAttribute("error", "Title is required");
-            model.addAttribute("severities", Severity.values());
-            return "create-bug";
-        }
-
-        if (description == null || description.trim().isEmpty()) {
-            model.addAttribute("error", "Description is required");
-            model.addAttribute("severities", Severity.values());
-            return "create-bug";
         }
 
         try {
@@ -156,15 +139,16 @@ public class BugController {
             return "redirect:/bugs/" + bug.getId();
 
         } catch (IllegalArgumentException e) {
-            model.addAttribute("error", "Invalid severity level");
+            model.addAttribute("error", e.getMessage());
+            model.addAttribute("severities", Severity.values());
+            return "create-bug";
+        } catch (Exception e) {
+            model.addAttribute("error", "Failed to create bug. Please try again.");
             model.addAttribute("severities", Severity.values());
             return "create-bug";
         }
     }
 
-    /**
-     * Claim a bug (Hunter only)
-     */
     @PostMapping("/{id}/claim")
     public String claimBug(@PathVariable Long id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
@@ -176,14 +160,14 @@ public class BugController {
             bugService.claimBug(id, user);
             return "redirect:/bugs/" + id;
         } catch (IllegalStateException | IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
+            session.setAttribute("error", e.getMessage());
+            return "redirect:/bugs/" + id;
+        } catch (Exception e) {
+            session.setAttribute("error", "Failed to claim bug. Please try again.");
             return "redirect:/bugs/" + id;
         }
     }
 
-    /**
-     * Mark bug as fixed (Hunter only)
-     */
     @PostMapping("/{id}/fix")
     public String markAsFixed(
             @PathVariable Long id,
@@ -196,23 +180,18 @@ public class BugController {
             return "redirect:/login";
         }
 
-        if (resolutionNotes == null || resolutionNotes.trim().isEmpty()) {
-            model.addAttribute("error", "Resolution notes are required");
-            return "redirect:/bugs/" + id;
-        }
-
         try {
             bugService.markAsFixed(id, user, resolutionNotes);
             return "redirect:/bugs/" + id;
         } catch (IllegalStateException | IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
+            session.setAttribute("error", e.getMessage());
+            return "redirect:/bugs/" + id;
+        } catch (Exception e) {
+            session.setAttribute("error", "Failed to mark bug as fixed. Please try again.");
             return "redirect:/bugs/" + id;
         }
     }
 
-    /**
-     * Close a bug (Admin only)
-     */
     @PostMapping("/{id}/close")
     public String closeBug(
             @PathVariable Long id,
@@ -229,7 +208,10 @@ public class BugController {
             bugService.closeBug(id, user, verificationNotes);
             return "redirect:/bugs/" + id;
         } catch (IllegalStateException | IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
+            session.setAttribute("error", e.getMessage());
+            return "redirect:/bugs/" + id;
+        } catch (Exception e) {
+            session.setAttribute("error", "Failed to close bug. Please try again.");
             return "redirect:/bugs/" + id;
         }
     }

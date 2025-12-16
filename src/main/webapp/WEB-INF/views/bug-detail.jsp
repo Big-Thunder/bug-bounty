@@ -28,6 +28,13 @@
 <main>
     <h2>Bug Details</h2>
 
+    <c:if test="${not empty sessionScope.error}">
+        <div style="color: red; border: 1px solid red; padding: 10px; margin: 10px 0; background-color: #ffe6e6;">
+            <strong>Error:</strong> ${sessionScope.error}
+        </div>
+        <c:remove var="error" scope="session"/>
+    </c:if>
+
     <div style="border: 2px solid #007bff; padding: 20px; margin: 20px 0; background-color: #f8f9fa;">
         <h3>Bug #${bug.id}: ${bug.title}</h3>
 
