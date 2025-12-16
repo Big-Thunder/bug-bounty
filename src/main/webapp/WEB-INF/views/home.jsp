@@ -80,9 +80,5 @@
     </div>
 </main>
 
-<hr>
-<footer>
-    <p>&copy; 2024 Bug Bounty Lite | Session-based Authentication</p>
-</footer>
 </body>
 </html>

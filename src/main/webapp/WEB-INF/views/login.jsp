@@ -40,16 +40,5 @@
 </form>
 
 <p>Don't have an account? <a href="/register">Register here</a></p>
-
-<hr>
-<h3>Test Accounts</h3>
-<p>All passwords: <strong>password123</strong></p>
-<ul>
-    <li><strong>admin</strong> - Admin user</li>
-    <li><strong>john_hunter</strong> - Hunter (Developer)</li>
-    <li><strong>jane_hunter</strong> - Hunter (Developer)</li>
-    <li><strong>reporter1</strong> - Reporter</li>
-    <li><strong>reporter2</strong> - Reporter</li>
-</ul>
 </body>
 </html>
