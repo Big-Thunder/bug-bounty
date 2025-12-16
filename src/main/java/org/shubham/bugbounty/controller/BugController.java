@@ -93,9 +93,6 @@ public class BugController {
         return "bug-detail";
     }
 
-    /**
-     * Show create bug form (Reporter only)
-     */
     @GetMapping("/create")
     public String showCreateBugForm(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
@@ -103,9 +100,8 @@ public class BugController {
             return "redirect:/login";
         }
 
-        // Only reporters can create bugs
-        if (user.getRole() != Role.REPORTER) {
-            model.addAttribute("error", "Only reporters can create bugs");
+        if (user.getRole() != Role.REPORTER && user.getRole() != Role.ADMIN) {
+            model.addAttribute("error", "Only reporters and admins can create bugs");
             return "redirect:/bugs";
         }
 
@@ -127,8 +123,8 @@ public class BugController {
             return "redirect:/login";
         }
 
-        if (user.getRole() != Role.REPORTER) {
-            model.addAttribute("error", "Only reporters can create bugs");
+        if (user.getRole() != Role.REPORTER && user.getRole() != Role.ADMIN) {
+            model.addAttribute("error", "Only reporters and admins can create bugs");
             return "redirect:/bugs";
         }
 

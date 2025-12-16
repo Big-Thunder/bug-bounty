@@ -44,16 +44,16 @@
                 <td>
                     <c:choose>
                         <c:when test="${bug.status == 'OPEN'}">
-                            <span style="color: blue; font-size: 1.2em; font-weight: bold;">● OPEN</span>
+                            <span style="color: blue; font-size: 1.2em; font-weight: bold;">OPEN</span>
                         </c:when>
                         <c:when test="${bug.status == 'CLAIMED'}">
-                            <span style="color: orange; font-size: 1.2em; font-weight: bold;">● CLAIMED</span>
+                            <span style="color: orange; font-size: 1.2em; font-weight: bold;">CLAIMED</span>
                         </c:when>
                         <c:when test="${bug.status == 'FIXED'}">
-                            <span style="color: purple; font-size: 1.2em; font-weight: bold;">● FIXED</span>
+                            <span style="color: purple; font-size: 1.2em; font-weight: bold;">FIXED</span>
                         </c:when>
                         <c:otherwise>
-                            <span style="color: green; font-size: 1.2em; font-weight: bold;">✓ CLOSED</span>
+                            <span style="color: green; font-size: 1.2em; font-weight: bold;">CLOSED</span>
                         </c:otherwise>
                     </c:choose>
                 </td>
@@ -64,16 +64,16 @@
                 <td>
                     <c:choose>
                         <c:when test="${bug.severity == 'CRITICAL'}">
-                            <span style="color: red; font-weight: bold; font-size: 1.1em;">🔴 CRITICAL</span>
+                            <span style="color: red; font-weight: bold; font-size: 1.1em;">CRITICAL</span>
                         </c:when>
                         <c:when test="${bug.severity == 'HIGH'}">
-                            <span style="color: orange; font-weight: bold; font-size: 1.1em;">🟠 HIGH</span>
+                            <span style="color: orange; font-weight: bold; font-size: 1.1em;">HIGH</span>
                         </c:when>
                         <c:when test="${bug.severity == 'MEDIUM'}">
-                            <span style="color: #ffc107; font-weight: bold;">🟡 MEDIUM</span>
+                            <span style="color: #ffc107; font-weight: bold;">MEDIUM</span>
                         </c:when>
                         <c:otherwise>
-                            <span style="color: green;">🟢 LOW</span>
+                            <span style="color: green;">LOW</span>
                         </c:otherwise>
                     </c:choose>
                 </td>
@@ -154,7 +154,7 @@
             <c:when test="${bug.status == 'OPEN' && sessionScope.role == 'HUNTER'}">
                 <form action="/bugs/${bug.id}/claim" method="post" style="display: inline;">
                     <button type="submit" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; font-size: 16px;">
-                        🎯 Claim This Bug
+                        Claim This Bug
                     </button>
                 </form>
                 <p><em>Click to claim this bug and start working on it</em></p>
@@ -169,7 +169,7 @@
                               placeholder="Describe the fix you implemented..."></textarea>
                     <br>
                     <button type="submit" style="padding: 10px 20px; background-color: #28a745; color: white; border: none; cursor: pointer; font-size: 16px; margin-top: 10px;">
-                        ✅ Mark as Fixed
+                        Mark as Fixed
                     </button>
                 </form>
                 <p><em>Provide details about the fix before marking as fixed</em></p>
@@ -184,7 +184,7 @@
                               placeholder="Add verification notes (optional)..."></textarea>
                     <br>
                     <button type="submit" style="padding: 10px 20px; background-color: #6f42c1; color: white; border: none; cursor: pointer; font-size: 16px; margin-top: 10px;">
-                        🔒 Close Bug
+                        Close Bug
                     </button>
                 </form>
                 <p><em>Verify the fix and close the bug</em></p>
@@ -193,7 +193,7 @@
             <%-- Bug is CLOSED --%>
             <c:when test="${bug.status == 'CLOSED'}">
                 <div style="border: 1px solid #28a745; padding: 15px; background-color: #d4edda; color: #155724;">
-                    <strong>✓ This bug has been resolved and closed.</strong>
+                    <strong>This bug has been resolved and closed.</strong>
                 </div>
             </c:when>
 
@@ -209,7 +209,7 @@
             <form action="/bugs/${bug.id}/delete" method="post" style="display: inline; margin-left: 20px;"
                   onsubmit="return confirm('Are you sure you want to delete this bug? This action cannot be undone.');">
                 <button type="submit" style="padding: 10px 20px; background-color: #dc3545; color: white; border: none; cursor: pointer; font-size: 14px;">
-                    🗑️ Delete Bug (Admin)
+                    Delete Bug (Admin)
                 </button>
             </form>
         </c:if>
@@ -229,11 +229,11 @@
                         <td style="vertical-align: top;">
                             <c:choose>
                                 <c:when test="${entry.oldStatus == null}">
-                                    <span style="color: blue;">● ${entry.newStatus}</span>
+                                    <span style="color: blue;">${entry.newStatus}</span>
                                 </c:when>
                                 <c:otherwise>
                                     <span style="color: #999;">${entry.oldStatus}</span>
-                                    →
+                                    to
                                     <span style="color: blue; font-weight: bold;">${entry.newStatus}</span>
                                 </c:otherwise>
                             </c:choose>

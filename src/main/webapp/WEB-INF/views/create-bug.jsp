@@ -1,10 +1,9 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bug List - Bug Bounty Lite</title>
+    <title>Report Bug - Bug Bounty Lite</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -15,7 +14,7 @@
         <a href="/home">Home</a> |
         <a href="/bugs">View Bugs</a> |
 
-        <c:if test="${sessionScope.role == 'REPORTER'}">
+        <c:if test="${sessionScope.role == 'REPORTER' || sessionScope.role == 'ADMIN'}">
             <a href="/bugs/create">Report Bug</a> |
         </c:if>
 
@@ -27,124 +26,82 @@
 <hr>
 
 <main>
-    <h2>Bug List</h2>
+    <h2>Report a New Bug</h2>
 
-    <!-- Filter Options -->
-    <div style="border: 1px solid #ccc; padding: 15px; margin: 15px 0; background-color: #f9f9f9;">
-        <h3>Filter Bugs:</h3>
-        <div>
-            <strong>By Status:</strong>
-            <a href="/bugs">All</a> |
-            <a href="/bugs?status=OPEN">Open</a> |
-            <a href="/bugs?status=CLAIMED">Claimed</a> |
-            <a href="/bugs?status=FIXED">Fixed</a> |
-            <a href="/bugs?status=CLOSED">Closed</a>
+    <c:if test="${not empty error}">
+        <div style="color: red; border: 1px solid red; padding: 10px; margin: 10px 0; background-color: #ffe6e6;">
+            <strong>Error:</strong> ${error}
         </div>
+    </c:if>
 
-        <div style="margin-top: 10px;">
-            <strong>My Bugs:</strong>
-            <c:if test="${sessionScope.role == 'REPORTER'}">
-                <a href="/bugs?reportedBy=me">Reported by Me</a>
-            </c:if>
-            <c:if test="${sessionScope.role == 'HUNTER'}">
-                <a href="/bugs?assignedTo=me">Assigned to Me</a>
-            </c:if>
-            <c:if test="${sessionScope.role == 'ADMIN'}">
-                <a href="/bugs?reportedBy=me">Reported by Me</a> |
-                <a href="/bugs?assignedTo=me">Assigned to Me</a>
-            </c:if>
-        </div>
+    <div style="border: 1px solid #007bff; padding: 20px; margin: 20px 0; background-color: #f8f9fa; max-width: 800px;">
+        <form action="/bugs/create" method="post">
+            <div style="margin-bottom: 15px;">
+                <label for="title"><strong>Bug Title:</strong> <span style="color: red;">*</span></label><br>
+                <input type="text" id="title" name="title" required
+                       style="width: 100%; padding: 8px; font-size: 14px;"
+                       maxlength="200"
+                       placeholder="Brief summary of the bug">
+                <small>Maximum 200 characters</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="description"><strong>Description:</strong> <span style="color: red;">*</span></label><br>
+                <textarea id="description" name="description" required
+                          style="width: 100%; padding: 8px; font-size: 14px; min-height: 150px;"
+                          placeholder="Detailed description of the bug, steps to reproduce, expected behavior, and actual behavior"></textarea>
+                <small>Provide detailed information to help developers understand and fix the issue</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="severity"><strong>Severity:</strong> <span style="color: red;">*</span></label><br>
+                <select id="severity" name="severity" required style="padding: 8px; font-size: 14px;">
+                    <option value="">-- Select Severity --</option>
+                    <c:forEach var="sev" items="${severities}">
+                        <option value="${sev}">${sev.displayName}</option>
+                    </c:forEach>
+                </select>
+                <br>
+                <small>
+                    <strong>Guidelines:</strong><br>
+                    • <strong>LOW:</strong> Minor issues with workarounds<br>
+                    • <strong>MEDIUM:</strong> Moderate impact on functionality<br>
+                    • <strong>HIGH:</strong> Significant functionality broken<br>
+                    • <strong>CRITICAL:</strong> System crashes or data loss
+                </small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="affectedModule"><strong>Affected Module:</strong> (Optional)</label><br>
+                <input type="text" id="affectedModule" name="affectedModule"
+                       style="width: 100%; padding: 8px; font-size: 14px;"
+                       maxlength="100"
+                       placeholder="e.g., Login Module, Payment Gateway, Search Feature">
+                <small>The module or component where the bug occurs</small>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button type="submit" style="padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; cursor: pointer;">
+                    Submit Bug Report
+                </button>
+                <a href="/bugs" style="margin-left: 10px; padding: 10px 20px; display: inline-block; background-color: #6c757d; color: white; text-decoration: none;">
+                    Cancel
+                </a>
+            </div>
+        </form>
     </div>
 
-    <!-- Bug Count -->
-    <p><strong>Total Bugs:</strong> ${bugs.size()}</p>
-
-    <!-- Bug Table -->
-    <c:choose>
-        <c:when test="${empty bugs}">
-            <div style="border: 1px solid #ffc107; padding: 20px; margin: 20px 0; background-color: #fff3cd;">
-                <p><strong>No bugs found.</strong></p>
-                <c:if test="${sessionScope.role == 'REPORTER'}">
-                    <p><a href="/bugs/create">Report the first bug</a></p>
-                </c:if>
-            </div>
-        </c:when>
-        <c:otherwise>
-            <table border="1" cellpadding="10" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-                <thead style="background-color: #007bff; color: white;">
-                <tr>
-                    <th>ID</th>
-                    <th>Title</th>
-                    <th>Severity</th>
-                    <th>Status</th>
-                    <th>Reporter</th>
-                    <th>Assigned Hunter</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <c:forEach var="bug" items="${bugs}">
-                    <tr>
-                        <td>${bug.id}</td>
-                        <td>
-                            <a href="/bugs/${bug.id}">${bug.title}</a>
-                        </td>
-                        <td>
-                            <c:choose>
-                                <c:when test="${bug.severity == 'CRITICAL'}">
-                                    <span style="color: red; font-weight: bold;">CRITICAL</span>
-                                </c:when>
-                                <c:when test="${bug.severity == 'HIGH'}">
-                                    <span style="color: orange; font-weight: bold;">HIGH</span>
-                                </c:when>
-                                <c:when test="${bug.severity == 'MEDIUM'}">
-                                    <span style="color: #ffc107;">MEDIUM</span>
-                                </c:when>
-                                <c:otherwise>
-                                    <span style="color: green;">LOW</span>
-                                </c:otherwise>
-                            </c:choose>
-                        </td>
-                        <td>
-                            <c:choose>
-                                <c:when test="${bug.status == 'OPEN'}">
-                                    <span style="color: blue;">OPEN</span>
-                                </c:when>
-                                <c:when test="${bug.status == 'CLAIMED'}">
-                                    <span style="color: orange;">CLAIMED</span>
-                                </c:when>
-                                <c:when test="${bug.status == 'FIXED'}">
-                                    <span style="color: purple;">FIXED</span>
-                                </c:when>
-                                <c:otherwise>
-                                    <span style="color: green;">CLOSED</span>
-                                </c:otherwise>
-                            </c:choose>
-                        </td>
-                        <td>${bug.reporter.fullName}</td>
-                        <td>
-                            <c:choose>
-                                <c:when test="${bug.assignedHunter != null}">
-                                    ${bug.assignedHunter.fullName}
-                                </c:when>
-                                <c:otherwise>
-                                    <em>Unassigned</em>
-                                </c:otherwise>
-                            </c:choose>
-                        </td>
-                        <td>
-                                ${bug.createdAt.toString().substring(0, 16).replace('T', ' ')}
-                        </td>
-                        <td>
-                            <a href="/bugs/${bug.id}">View Details</a>
-                        </td>
-                    </tr>
-                </c:forEach>
-                </tbody>
-            </table>
-        </c:otherwise>
-    </c:choose>
+    <div style="border: 1px solid #28a745; padding: 15px; margin: 20px 0; background-color: #e8f5e9; max-width: 800px;">
+        <h3>Tips for Effective Bug Reports:</h3>
+        <ul>
+            <li>Use a clear, descriptive title</li>
+            <li>Include steps to reproduce the issue</li>
+            <li>Describe expected vs. actual behavior</li>
+            <li>Mention browser/device information if relevant</li>
+            <li>Add any error messages you encountered</li>
+            <li>Choose appropriate severity level</li>
+        </ul>
+    </div>
 </main>
 
 <hr>

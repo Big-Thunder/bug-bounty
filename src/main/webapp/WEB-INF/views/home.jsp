@@ -14,7 +14,7 @@
         <a href="/home">Home</a> |
         <a href="/bugs">View Bugs</a> |
 
-        <c:if test="${sessionScope.role == 'REPORTER'}">
+        <c:if test="${sessionScope.role == 'REPORTER' || sessionScope.role == 'ADMIN'}">
             <a href="/bugs/create">Report Bug</a> |
         </c:if>
 
